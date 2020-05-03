@@ -7,83 +7,102 @@ def featureScale(x):
 
 
 def sigmoid(x):
-    return 1 / (1 + np.exp(-x))
+    y = 1 / (1 + np.exp(-x))
+    return y
 
 
 def gradSigmoid(x):
-    return sigmoid(x) * (1 - sigmoid(x))
+    return x * (1 - x)
 
 
 class NeuralNetwork:
     def __init__(self):
-        self.inputToHiddenTheta = 0
-        self.hiddenTheta = []
-        self.hiddenToOutputTheta = 0
+        self.activations = []
+        self.hiddenLayers = 0
+        self.hiddenUnits = 0
+        self.inputUnits = 0
+        self.outputUnits = 0
+        self.network = []
+        np.random.seed(1)
         return
 
-    def costFunction(self, X, y, Lambda,hiddenUnits,hiddenLayers):
-        m, n = np.shape(X)
-        dummy, outputSize = np.shape(y)
-        # apply feedforward propagation to calculate activation units
-        activIn = X
-
-        z=X.dot(self.inputToHiddenTheta.T)
-        a=sigmoid(z)
-        zHidden=[z]
-        activHidden=[a]
-        for i in range(1,hiddenLayers-1):
-            z=activHidden[i-1].dot(self.hiddenTheta[i])
-            a=sigmoid(a)
-            zHidden.append(z)
-            activHidden.append(a)
-        a = np.append(np.ones((m, 1)), a, axis=1)
-        zOut=a.dot(self.hiddenToOutputTheta.T)
-        activOut = sigmoid(zOut)
-
-        # calculate cost function J
-        J=(-1/m)*np.sum(y*np.log(activOut)+(1-y)*np.log(1-activOut))
-        if Lambda!=0:
-            regInputToHiddenTheta=self.inputToHiddenTheta[:,1:]
-            regHiddenTheta=[]
-            for i in range(hiddenLayers-1):
-                regHiddenTheta.append(self.hiddenTheta[i][:,1:])
-            regHiddenToOutputTheta=self.hiddenToOutputTheta[:,1:]
-            error=(Lambda/(2*m))*(np.sum(np.square(regInputToHiddenTheta))+np.sum(np.square(regHiddenToOutputTheta)))
-            for i in range(hiddenLayers-1):
-                error+=np.sum(np.square(regHiddenTheta[i]))
-            J=J+error
-        print(J)
-        # TODO:apply backpropagation to calculate deltas
-        #initializing deltas to zeros
-        delOutTheta=np.zeros((outputSize, hiddenUnits + 1))
-        deltaHiddenTheta=[]
-        for i in range(hiddenLayers - 1):
-            deltaHiddenTheta.append(np.zeros((hiddenUnits, hiddenUnits + 1)))
-        aHidden=[None]*(hiddenLayers-1)
-        dHid=[None]*(hiddenLayers-1)
-        for i in range(m):
+    def __forwardPropagate(self, X):
+        m,n=np.shape(X)
+        activations = [0] * (self.hiddenLayers + 2)
+        activations[0] = X
+        for i in range(1, self.hiddenLayers + 2):
+            if i != 1:
+                activations[i - 1] = np.append(np.ones((m, 1)), activations[i - 1], axis=1)
+            activations[i] = sigmoid(activations[i - 1].dot(self.network[i - 1].T))
+        self.activations = activations
 
 
-            continue
+    def __backpropagate(self, y):
+        deltaNetwork=list()
+        temp=np.zeros((self.hiddenUnits, self.inputUnits))
+        deltaNetwork.append(temp)
+        temp=[]
+        for i in range(1,self.hiddenLayers):
+            temp.append(np.zeros((self.hiddenUnits, self.hiddenUnits + 1)))
+        deltaNetwork+=temp
+        temp=np.zeros((self.outputUnits, self.hiddenUnits + 1))
+        deltaNetwork.append(temp)
+        for i in range(self.m):
+            yi = y[i, :]
+            deltas = [0] * (self.hiddenLayers + 1)
+            deltas[-1] = (self.activations[-1][i, :] - yi).reshape(self.outputUnits, 1)
+            for j in reversed(range(self.hiddenLayers)):
+                deltas[j] = np.dot(self.network[j+1].T,deltas[j+1].T).T*sigmoid(self.activations[j+1][i,:])
+                deltas[j]=deltas[j][:,1:]
+            for j in range(self.hiddenLayers+1):
+                n=np.shape(self.activations[j][i,:])
+                x=np.matrix(self.activations[j][i,:].reshape(n))
+                deltaNetwork[j]+=deltas[j].T.dot(x)
+        for j in range(self.hiddenLayers+1):
+            deltaNetwork[j]/=self.m
+        return deltaNetwork
 
+    def __initializeNetwork(self):
+        inputToHiddenTheta = np.random.rand(self.hiddenUnits, self.inputUnits)
+        self.network.append(inputToHiddenTheta)
+        hiddenTheta = [None] * (self.hiddenLayers - 1)
+        for i in range(self.hiddenLayers - 1):
+            hiddenTheta[i] = np.random.rand(self.hiddenUnits, self.hiddenUnits + 1)
+        self.network += hiddenTheta
+        hiddenToOutputTheta = np.random.rand(self.outputUnits, self.hiddenUnits + 1)
+        self.network.append(hiddenToOutputTheta)
         return
+
+    def __costFunction(self,y):
+        error = (-1 / self.m) * (np.sum(y * np.log(self.activations[-1]) + (1 - y) * np.log(1 - self.activations[-1])))
+        return error
 
     def train(self, X, y, hiddenUnits, alpha=0.01, iters=10000, Lambda=0, hiddenLayers=1):
-        m, n = np.shape(X)
+        self.m, n = np.shape(X)
+        m, self.outputUnits = np.shape(y)
         X = np.append(np.ones((m, 1)), X, axis=1)
-        dummy, outputSize = np.shape(y)
-        n=n+1
-        # initialize inputToHiddenTheta with random values of size hiddenUnits*n+1
-        self.inputToHiddenTheta = np.random.rand(hiddenUnits, n)
-        # initialize hiddenTheta as a cubic matrix with dimensions hiddenLayers*hiddenUnits*hiddenUnits+1
-        for i in range(hiddenLayers - 1):
-            self.hiddenTheta.append(np.random.rand(hiddenUnits, hiddenUnits + 1))
-        # initialize hiddenToOutputTheta with random values of size hiddenUnits*outputSize
-        self.hiddenToOutputTheta = np.random.rand(outputSize, hiddenUnits + 1)
-        J=self.costFunction(X,y,Lambda,hiddenUnits,hiddenLayers)
-
-        # TODO:apply gradient descent algorithm to minimize thetas
-        return J
+        n += 1
+        self.inputUnits = n
+        self.hiddenUnits = hiddenUnits
+        self.hiddenLayers = hiddenLayers
+        # initialize network
+        self.__initializeNetwork()
+        Jvec = np.zeros(iters)
+        for iter in range(iters):
+            J = 0
+            stage = iters / 100
+            self.__forwardPropagate(X)
+            J=self.__costFunction(y)
+            deltaNetwork=self.__backpropagate(y)
+            for j in range(self.hiddenLayers+1):
+                self.network[j]-=alpha*deltaNetwork[j]
+            Jvec[iter] = J
+            if iter%stage==0:
+                print(J)
+        return Jvec
 
     def predict(self, X):
-        return
+        m, n = np.shape(X)
+        X = np.append(np.ones((m, 1)), X, axis=1)
+        self.__forwardPropagate(X)
+        return np.round(self.activations[-1])
