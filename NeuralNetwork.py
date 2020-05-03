@@ -27,7 +27,7 @@ class NeuralNetwork:
         return
 
     def __forwardPropagate(self, X):
-        m,n=np.shape(X)
+        m, n = np.shape(X)
         activations = [0] * (self.hiddenLayers + 2)
         activations[0] = X
         for i in range(1, self.hiddenLayers + 2):
@@ -36,31 +36,35 @@ class NeuralNetwork:
             activations[i] = sigmoid(activations[i - 1].dot(self.network[i - 1].T))
         self.activations = activations
 
-
-    def __backpropagate(self, y):
-        deltaNetwork=list()
-        temp=np.zeros((self.hiddenUnits, self.inputUnits))
+    def __backpropagate(self, y,Lambda):
+        deltaNetwork = list()
+        temp = np.zeros((self.hiddenUnits, self.inputUnits))
         deltaNetwork.append(temp)
-        temp=[]
-        for i in range(1,self.hiddenLayers):
+        temp = []
+        for i in range(1, self.hiddenLayers):
             temp.append(np.zeros((self.hiddenUnits, self.hiddenUnits + 1)))
-        deltaNetwork+=temp
-        temp=np.zeros((self.outputUnits, self.hiddenUnits + 1))
+        deltaNetwork += temp
+        temp = np.zeros((self.outputUnits, self.hiddenUnits + 1))
         deltaNetwork.append(temp)
         for i in range(self.m):
             yi = y[i, :]
             deltas = [0] * (self.hiddenLayers + 1)
             deltas[-1] = (self.activations[-1][i, :] - yi).reshape(self.outputUnits, 1)
             for j in reversed(range(self.hiddenLayers)):
-                deltas[j] = np.dot(self.network[j+1].T,deltas[j+1].T).T*sigmoid(self.activations[j+1][i,:])
-                deltas[j]=deltas[j][:,1:]
+                deltas[j] = np.dot(self.network[j + 1].T, deltas[j + 1].T).T * sigmoid(self.activations[j + 1][i, :])
+                deltas[j] = deltas[j][:, 1:]
+            for j in range(self.hiddenLayers + 1):
+                n = np.shape(self.activations[j][i, :])
+                x = np.matrix(self.activations[j][i, :].reshape(n))
+                deltaNetwork[j] += deltas[j].T.dot(x)
+
+        if Lambda!=0:
+            regNetwork=self.network
             for j in range(self.hiddenLayers+1):
-                n=np.shape(self.activations[j][i,:])
-                x=np.matrix(self.activations[j][i,:].reshape(n))
-                deltaNetwork[j]+=deltas[j].T.dot(x)
+                regNetwork[j][:,0]=0
+                deltaNetwork[j]+=regNetwork[j]*Lambda
         for j in range(self.hiddenLayers+1):
-            deltaNetwork[j]/=self.m
-        #TODO: add regularization term
+            deltaNetwork[j] /= self.m
         return deltaNetwork
 
     def __initializeNetwork(self):
@@ -74,9 +78,14 @@ class NeuralNetwork:
         self.network.append(hiddenToOutputTheta)
         return
 
-    def __costFunction(self,y):
+    def __costFunction(self, y, Lambda):
         error = (-1 / self.m) * (np.sum(y * np.log(self.activations[-1]) + (1 - y) * np.log(1 - self.activations[-1])))
-        #TODO: add regularization term
+        if Lambda != 0:
+            regNetwrok = self.network
+            regTerm = 0
+            for i in range(self.hiddenLayers + 2):
+                regTerm += np.square(np.sum(regNetwrok[i][:, 1:]))
+            error = (Lambda / (2 * self.m)) * regTerm
         return error
 
     def train(self, X, y, hiddenUnits, alpha=0.01, iters=10000, Lambda=0, hiddenLayers=1):
@@ -93,10 +102,10 @@ class NeuralNetwork:
         for iter in range(iters):
             J = 0
             self.__forwardPropagate(X)
-            J=self.__costFunction(y)
-            deltaNetwork=self.__backpropagate(y)
-            for j in range(self.hiddenLayers+1):
-                self.network[j]-=alpha*deltaNetwork[j]
+            J = self.__costFunction(y,Lambda)
+            deltaNetwork = self.__backpropagate(y,Lambda)
+            for j in range(self.hiddenLayers + 1):
+                self.network[j] -= alpha * deltaNetwork[j]
             Jvec[iter] = J
         return Jvec
 
