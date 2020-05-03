@@ -1,6 +1,8 @@
 import numpy as np
 import random
 
+#TODO: add more activation functions
+
 
 def featureScale(x):
     return (x - x.mean()) / x.std()
@@ -49,14 +51,14 @@ class NeuralNetwork:
         for i in range(self.m):
             yi = y[i, :]
             deltas = [0] * (self.hiddenLayers + 1)
-            deltas[-1] = (self.activations[-1][i, :] - yi).reshape(self.outputUnits, 1)
+            deltas[-1] = (self.activations[-1][i, :] - yi).reshape(self.outputUnits, 1)*gradSigmoid(self.activations[-1][i,:])
             for j in reversed(range(self.hiddenLayers)):
-                deltas[j] = np.dot(self.network[j + 1].T, deltas[j + 1].T).T * sigmoid(self.activations[j + 1][i, :])
+                deltas[j] = np.dot(self.network[j + 1].T, deltas[j + 1].T).T* sigmoid(self.activations[j + 1][i, :])
                 deltas[j] = deltas[j][:, 1:]
             for j in range(self.hiddenLayers + 1):
                 n = np.shape(self.activations[j][i, :])
-                x = np.matrix(self.activations[j][i, :].reshape(n))
-                deltaNetwork[j] += deltas[j].T.dot(x)
+                #x = np.matrix(self.activations[j][i, :].reshape(n))
+                deltaNetwork[j] += deltas[j].T.dot(self.activations[j][i,:].reshape((1,n[0])))
 
         if Lambda!=0:
             regNetwork=self.network
@@ -83,21 +85,24 @@ class NeuralNetwork:
         if Lambda != 0:
             regNetwrok = self.network
             regTerm = 0
-            for i in range(self.hiddenLayers + 2):
+            for i in range(self.hiddenLayers + 1):
                 regTerm += np.square(np.sum(regNetwrok[i][:, 1:]))
             error = (Lambda / (2 * self.m)) * regTerm
         return error
 
     def train(self, X, y, hiddenUnits, alpha=0.01, iters=10000, Lambda=0, hiddenLayers=1):
+        y=np.array(y)
         self.m, n = np.shape(X)
         m, self.outputUnits = np.shape(y)
-        X = np.append(np.ones((m, 1)), X, axis=1)
+
+        X = np.append(np.ones((self.m, 1)), X, axis=1)
         n += 1
         self.inputUnits = n
         self.hiddenUnits = hiddenUnits
         self.hiddenLayers = hiddenLayers
         # initialize network
         self.__initializeNetwork()
+        stage=iters/100
         Jvec = np.zeros(iters)
         for iter in range(iters):
             J = 0
@@ -107,6 +112,8 @@ class NeuralNetwork:
             for j in range(self.hiddenLayers + 1):
                 self.network[j] -= alpha * deltaNetwork[j]
             Jvec[iter] = J
+            if iter%stage==0:
+                print(J)
         return Jvec
 
     def predict(self, X):
