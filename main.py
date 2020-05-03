@@ -15,10 +15,11 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_
 
 model = NeuralNetwork()
 
-j = model.train(X_train, y_train, alpha=0.03, hiddenUnits=10, hiddenLayers=2, Lambda=0)
+j = model.train(X_train, y_train, alpha=0.03, hiddenUnits=8, hiddenLayers=1, Lambda=0, iters=10000)
 y_pred = model.predict(X_test)
 cm = confusion_matrix(y_test, y_pred)
 print(cm)
-accuracy = (cm[0, 0] + cm[1, 1]) / sum(cm)
+accuracy = (cm[0, 0] + cm[1, 1]) / sum(sum(cm))
+print("accuracy: ", accuracy)
 plt.plot(j)
 plt.show()
