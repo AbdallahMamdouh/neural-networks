@@ -14,7 +14,7 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_
 
 model=NeuralNetwork()
 
-j=model.train(X_train,y_train,6,alpha=0.1,hiddenLayers=2,iters=10000)
+j=model.train(X_train,y_train,hiddenUnits=100,hiddenLayers=2)
 y_pred=model.predict(X_test)
 cm=confusion_matrix(y_test,y_pred)
 print(cm)

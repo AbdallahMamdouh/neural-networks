@@ -60,6 +60,7 @@ class NeuralNetwork:
                 deltaNetwork[j]+=deltas[j].T.dot(x)
         for j in range(self.hiddenLayers+1):
             deltaNetwork[j]/=self.m
+        #TODO: add regularization term
         return deltaNetwork
 
     def __initializeNetwork(self):
@@ -75,6 +76,7 @@ class NeuralNetwork:
 
     def __costFunction(self,y):
         error = (-1 / self.m) * (np.sum(y * np.log(self.activations[-1]) + (1 - y) * np.log(1 - self.activations[-1])))
+        #TODO: add regularization term
         return error
 
     def train(self, X, y, hiddenUnits, alpha=0.01, iters=10000, Lambda=0, hiddenLayers=1):
@@ -90,15 +92,12 @@ class NeuralNetwork:
         Jvec = np.zeros(iters)
         for iter in range(iters):
             J = 0
-            stage = iters / 100
             self.__forwardPropagate(X)
             J=self.__costFunction(y)
             deltaNetwork=self.__backpropagate(y)
             for j in range(self.hiddenLayers+1):
                 self.network[j]-=alpha*deltaNetwork[j]
             Jvec[iter] = J
-            if iter%stage==0:
-                print(J)
         return Jvec
 
     def predict(self, X):
