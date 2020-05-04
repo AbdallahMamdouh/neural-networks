@@ -106,8 +106,8 @@ class NeuralNetwork:
             self.activations[i] = activate(self.activations[i - 1].dot(self.network[i - 1].layer.T), self.network[i-1].activation)
 
     def __backpropagate(self, y, Lambda):
-        deltaNetwork = [0] * (self.layers)
-        deltas = [0] * (self.layers)
+        deltaNetwork = [0] * self.layers
+        deltas = [0] * self.layers
         deltas[-1] = (self.activations[-1] - y) * activate(self.activations[-1], self.network[-1].activation, True)
         for i in reversed(range(self.layers-1)):
             deltas[i] = np.dot(deltas[i + 1], self.network[i + 1].layer) * activate(self.activations[i + 1], self.network[i+1].activation,
@@ -123,24 +123,22 @@ class NeuralNetwork:
             for i in range(self.layers):
                 regNetwork[i].layer[:, 0] = 0
                 deltaNetwork[i] += regNetwork[i].layer * Lambda
-                regTerm += np.sum(np.square(regNetwork[i].layer[:, 1:]))
-                error += (Lambda / (2 * self.trainSize)) * regTerm
+                regTerm += np.sum(np.square(regNetwork[i].layer))
+            error += (Lambda / (2 * self.trainSize)) * regTerm
         for i in range(self.layers):
             deltaNetwork[i] /= self.trainSize
         return deltaNetwork, error
 
     def train(self, X, y, alpha=0.01, iters=10000, Lambda=0.01):
-        y = np.array(y)
         self.trainSize, n = np.shape(X)
         X = np.append(np.ones((self.trainSize, 1)), X, axis=1)
-        # initialize network
         stage = iters / 100
         Jvec = np.zeros(iters)
         for iter in range(iters):
             self.__forwardPropagate(X)
             deltaNetwork, J = self.__backpropagate(y, Lambda)
-            for j in range(self.layers):
-                self.network[j].layer -= alpha * deltaNetwork[j]
+            for i in range(self.layers):
+                self.network[i].layer -= alpha * deltaNetwork[i]
             if iter % stage == 0:
                 print("error: ", J)
             Jvec[iter] = J
