@@ -24,11 +24,18 @@ def featureScale(x):
 
 
 def gradReLu(x):
-    y = 1 if x > 0 else 0
+    x[x<0]=0
+    x[x>=0]=1
+    return x
 
 
 def reLu(x):
-    return max(0,x)
+    x[x<0]=0
+    return x
+
+
+def tanH(x):
+    return np.tanh(x)
 
 
 def sigmoid(x):
@@ -56,6 +63,9 @@ class NeuralNetwork:
         self.added_input = 0
         self.added_output = 0
         self.trainSize = 0
+        return
+
+    def load(self,fileName):
         return
 
     def add_input_layer(self, inputUnits):
@@ -149,3 +159,8 @@ class NeuralNetwork:
         X = np.append(np.ones((m, 1)), X, axis=1)
         self.__forwardPropagate(X)
         return np.round(self.activations[-1])
+
+    def save(self,fileName='model.txt'):
+        file=open(fileName,'w+')
+
+        return
