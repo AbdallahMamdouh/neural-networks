@@ -7,11 +7,10 @@ import random
 
 def activate(x, fn='sigmoid', grad=False):
     if fn == 'sigmoid':
-        y = sigmoid(x)
         if not grad:
-            return y
+            return sigmoid(x)
         else:
-            return y * (1 - y)
+            return gradSigmoid(x)
     elif fn == 'reLu':
         if not grad:
             return reLu(x)
